@@ -7,7 +7,7 @@ Pas d'installation ni de compte : tout fonctionne dans le navigateur et tes donn
 
 | Partie | Ce que tu peux faire |
 |---|---|
-| **Mes cours** | Ajouter, modifier, rechercher tes cours par matière/épreuve. Import de **PDF**, **Word (.docx)**, .txt, .md. Repérage automatique des définitions. |
+| **Mes cours** | **Import de tous tes fichiers d'un coup** (sélection multiple, glisser-déposer ou dossier entier) : chaque fichier devient un cours, la matière est devinée d'après le nom du fichier. Formats : **PDF**, **Word (.docx)**, .txt, .md. Ajout, modification et recherche, repérage automatique des définitions. |
 | **Réviser** | Choisir un ou plusieurs cours et éventuellement **un thème précis**, puis : **QCM**, **texte à trous**, **vrai/faux**, **questions ouvertes** (corrigées), **interrogation complète** (tous formats mélangés), **flashcards** (répétition espacée, méthode de Leitner). |
 | **Examen blanc** | Sujet type BTS (E1, E31, E41, E5, E6) chronométré, avec contexte, annexes et dossiers, noté sur 20 et corrigé question par question. Possibilité de s'inspirer d'une annale. |
 | **Annales BTS** | Présentation des épreuves, **banque de sujets d'entraînement** filtrable (épreuve, thème, mot-clé) avec éléments de corrigé, **« Mes annales »** pour stocker les vrais sujets que tu trouves, **recherche d'anciens sujets** (IA sur le web, Google/Qwant en PDF, sources officielles). |

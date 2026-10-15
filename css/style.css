@@ -192,3 +192,16 @@ input.trou.faux { border-color: var(--ko) !important; background: var(--ko-clair
   header, .barre-exam, .btn, textarea { display: none !important; }
   details { display: block; }
 }
+
+/* Import multiple */
+.zone-depot { display: flex; flex-direction: column; align-items: center; gap: .3rem; padding: 2.2rem 1rem; margin: 1rem 0 .4rem; text-align: center;
+  border: 2px dashed var(--bord); border-radius: var(--rayon); background: var(--surface); cursor: pointer; }
+.zone-depot:hover, .zone-depot.survol { border-color: var(--primaire); background: var(--primaire-clair); }
+.grand-icone { font-size: 2.4rem; }
+.centre-texte { text-align: center; margin: 0 0 1rem; }
+.tableau.import td { vertical-align: middle; }
+.tableau.import input:not([type=checkbox]), .tableau.import select { margin: 0 0 .2rem; }
+.tableau.import tr.fait { opacity: .6; }
+.statut { font-size: .85rem; white-space: nowrap; }
+.ko-texte { color: var(--ko); white-space: normal; }
+[hidden] { display: none !important; }

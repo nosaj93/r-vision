@@ -155,7 +155,7 @@ function pageAccueil() {
     <div class="stat"><span>${dues}</span>flashcards à revoir</div>
   </div>
   <div class="grille">
-    <a class="carte-lien" href="#cours/nouveau"><b>➕ Ajouter un cours</b><span>Colle ton texte ou importe un PDF / Word.</span></a>
+    <a class="carte-lien" href="#cours/import"><b>📥 Ajouter mes cours</b><span>Importe tous tes PDF / Word d'un coup, ou un dossier entier.</span></a>
     <a class="carte-lien" href="#reviser"><b>🧠 Réviser</b><span>QCM, textes à trous, vrai/faux, questions ouvertes, flashcards.</span></a>
     <a class="carte-lien" href="#examen"><b>📝 Examen blanc</b><span>Étude de cas chronométrée notée sur 20, comme au BTS.</span></a>
     <a class="carte-lien" href="#annales"><b>🔎 Annales BTS</b><span>Épreuves, sujets types, recherche d'anciens sujets.</span></a>
@@ -175,11 +175,12 @@ function pageAccueil() {
 // =====================================================================
 function pageCours(action, id) {
   if (action === "nouveau") return formCours();
+  if (action === "import") return importMultiple();
   if (action === "edit") return formCours(S.getCours(id));
   if (action === "voir") return voirCours(S.getCours(id));
   const cours = S.listCours();
   vue().innerHTML = `
-  <div class="row entre"><h1>Mes cours</h1><a class="btn" href="#cours/nouveau">➕ Nouveau cours</a></div>
+  <div class="row entre"><h1>Mes cours</h1><div class="actions"><a class="btn" href="#cours/import">📥 Importer plusieurs cours</a><a class="btn secondaire" href="#cours/nouveau">➕ Nouveau cours</a></div></div>
   <input id="recherche" type="search" placeholder="Rechercher dans mes cours (titre, matière, contenu)…">
   <div id="liste"></div>`;
   const afficher = (q = "") => {
@@ -193,10 +194,111 @@ function pageCours(action, id) {
           <a class="btn petit" href="#reviser/${c.id}">Réviser</a>
           <a class="btn petit secondaire" href="#cours/edit/${c.id}">Modifier</a>
         </div>
-      </article>`).join("") : `<p class="vide">${cours.length ? "Aucun résultat." : "Tu n'as encore aucun cours. Clique sur « Nouveau cours » pour commencer."}</p>`;
+      </article>`).join("") : `<p class="vide">${cours.length ? "Aucun résultat." : "Tu n'as encore aucun cours. Clique sur « Importer plusieurs cours » pour ajouter tous tes fichiers d'un coup."}</p>`;
   };
   $("#recherche").addEventListener("input", (e) => afficher(e.target.value));
   afficher();
+}
+
+// ----- Import de plusieurs fichiers d'un coup -----
+const EXTENSIONS = /\.(pdf|docx|txt|md)$/i;
+
+// Devine la matière à partir du nom du fichier (ex. « E41 - IRSI.pdf », « CEJM chap 2.docx »).
+function devinerMatiere(nom) {
+  const n = G.normalize(nom);
+  const ep = EPREUVES.find((e) => new RegExp(`(^|[^a-z0-9])${e.id.toLowerCase()}([^0-9]|$)`).test(n));
+  if (ep) return `${ep.id} — ${ep.nom}`;
+  const regles = [
+    [/cejm|economi|manag|droit des contrats/, "E6"],
+    [/sinistre|irsa|irsi|indemnis|expertise|badinter/, "E41"],
+    [/digital|numerique|rgpd|informatique/, "E5"],
+    [/culture gen|synthese/, "E1"],
+    [/anglais|english/, "E2"],
+  ];
+  for (const [re, id] of regles) if (re.test(n)) { const e = EPREUVES.find((x) => x.id === id); return `${e.id} — ${e.nom}`; }
+  if (/vie|prevoyance|sante|personne|emprunteur|retraite/.test(n)) return "Assurances de personnes";
+  if (/iard|auto|habitation|mrh|responsabilite|incendie|vol/.test(n)) return "Assurances de biens et de responsabilité (IARD)";
+  return "";
+}
+
+function importMultiple() {
+  let fichiers = []; // { file, titre, matiere, choisi, statut }
+  const existants = new Set(S.listCours().map((c) => G.normalize(c.titre)));
+  vue().innerHTML = `
+  <h1>Importer plusieurs cours</h1>
+  <p>Sélectionne tous tes fichiers d'un coup (PDF, Word .docx, .txt, .md) : <b>chaque fichier devient un cours</b>.</p>
+  <label class="zone-depot" id="zone">
+    <input type="file" id="multi" multiple accept=".pdf,.docx,.txt,.md" hidden>
+    <span class="grand-icone">📂</span>
+    <b>Clique pour choisir tes fichiers</b>
+    <span class="muted">ou glisse-dépose-les ici (Ctrl+A dans la fenêtre pour tout sélectionner)</span>
+  </label>
+  <p class="centre-texte"><label class="btn-lien">ou importer un dossier entier<input type="file" id="dossier" webkitdirectory multiple hidden></label></p>
+  <div id="apercu"></div>`;
+  const ajouter = (liste) => {
+    const nouveaux = [...liste].filter((f) => EXTENSIONS.test(f.name) && !fichiers.some((x) => x.file.name === f.name && x.file.size === f.size));
+    const ignores = liste.length - nouveaux.length;
+    for (const file of nouveaux) {
+      const titre = file.name.replace(/\.[^.]+$/, "").replace(/[_]+/g, " ").trim();
+      const doublon = existants.has(G.normalize(titre));
+      fichiers.push({ file, titre, matiere: devinerMatiere(file.name), choisi: !doublon, statut: doublon ? "déjà dans tes cours" : "" });
+    }
+    if (ignores > 0 && nouveaux.length < liste.length) toast(`${ignores} fichier(s) ignoré(s) (format non pris en charge ou déjà dans la liste).`);
+    afficher();
+  };
+  const afficher = () => {
+    if (!fichiers.length) { $("#apercu").innerHTML = ""; return; }
+    const nb = fichiers.filter((f) => f.choisi).length;
+    $("#apercu").innerHTML = `
+    <div class="encart">
+      <div class="row entre"><b>${fichiers.length} fichier(s) — ${nb} sélectionné(s)</b>
+        <div class="row gap-s"><button type="button" class="btn-lien" id="tout">Tout sélectionner</button><button type="button" class="btn-lien" id="rien">Tout désélectionner</button></div></div>
+      <label>Matière pour tous les fichiers sélectionnés
+        <select id="matiere-tous"><option value="">— garder la matière de chaque ligne —</option>${MATIERES.map((m) => `<option>${esc(m)}</option>`).join("")}</select></label>
+      <table class="tableau import">${fichiers.map((f, i) => `
+        <tr class="${f.statut === "importé ✔" ? "fait" : ""}">
+          <td><input type="checkbox" data-i="${i}" class="choix-f" ${f.choisi ? "checked" : ""} ${f.statut === "importé ✔" ? "disabled" : ""}></td>
+          <td><input data-i="${i}" class="titre-f" value="${esc(f.titre)}"><small class="muted">${esc(f.file.name)} · ${Math.ceil(f.file.size / 1024)} Ko</small></td>
+          <td><select data-i="${i}" class="matiere-f"><option value="">Matière…</option>${MATIERES.map((m) => `<option ${m === f.matiere ? "selected" : ""}>${esc(m)}</option>`).join("")}</select></td>
+          <td class="statut ${/erreur/.test(f.statut) ? "ko-texte" : ""}">${esc(f.statut)}</td>
+        </tr>`).join("")}</table>
+      <div class="row gap"><button class="btn grand" id="go" ${nb ? "" : "disabled"}>📥 Importer ${nb} cours</button><button type="button" class="btn secondaire" id="vider">Vider la liste</button></div>
+    </div>`;
+    $$(".choix-f").forEach((c) => (c.onchange = () => { fichiers[c.dataset.i].choisi = c.checked; afficher(); }));
+    $$(".titre-f").forEach((t) => (t.oninput = () => (fichiers[t.dataset.i].titre = t.value)));
+    $$(".matiere-f").forEach((m) => (m.onchange = () => (fichiers[m.dataset.i].matiere = m.value)));
+    $("#tout").onclick = () => { fichiers.forEach((f) => f.statut !== "importé ✔" && (f.choisi = true)); afficher(); };
+    $("#rien").onclick = () => { fichiers.forEach((f) => (f.choisi = false)); afficher(); };
+    $("#matiere-tous").onchange = (e) => { if (e.target.value) fichiers.forEach((f) => f.choisi && (f.matiere = e.target.value)); afficher(); };
+    $("#vider").onclick = () => { fichiers = []; afficher(); };
+    $("#go").onclick = importer;
+  };
+  const importer = async () => {
+    const aFaire = fichiers.filter((f) => f.choisi);
+    $("#go").disabled = true;
+    let ok = 0;
+    for (const [k, f] of aFaire.entries()) {
+      $("#go").textContent = `⏳ Import ${k + 1} / ${aFaire.length}…`;
+      try {
+        const contenu = (await lireFichier(f.file)).trim();
+        if (!contenu) throw new Error("fichier vide");
+        S.saveCours({ titre: f.titre.trim() || f.file.name, matiere: f.matiere || "Autre", chapitre: "", contenu });
+        f.statut = "importé ✔"; f.choisi = false; ok++;
+      } catch (err) {
+        f.statut = "erreur : " + err.message; f.choisi = false;
+      }
+    }
+    afficher();
+    const erreurs = aFaire.length - ok;
+    toast(`${ok} cours importé(s)${erreurs ? `, ${erreurs} erreur(s)` : ""}.`, erreurs ? "err" : "ok");
+    if (!erreurs) setTimeout(() => (location.hash = "#cours"), 900);
+  };
+  $("#multi").onchange = (e) => { ajouter(e.target.files); e.target.value = ""; };
+  $("#dossier").onchange = (e) => { ajouter(e.target.files); e.target.value = ""; };
+  const zone = $("#zone");
+  zone.ondragover = (e) => { e.preventDefault(); zone.classList.add("survol"); };
+  zone.ondragleave = () => zone.classList.remove("survol");
+  zone.ondrop = (e) => { e.preventDefault(); zone.classList.remove("survol"); ajouter(e.dataTransfer.files); };
 }
 
 function formCours(c = {}) {
